@@ -103,9 +103,6 @@ if ($periph.Count -gt 0) {
 
 [Console]::ForegroundColor = [ConsoleColor]::White
 [Console]::WriteLine("")
-[Console]::WriteLine("")
-[Console]::WriteLine("")
-[Console]::WriteLine("")
 [Console]::WriteLine("Press 'C' to exit (Text can be copy and pasted)...")
 [Console]::ResetColor()
 [Console]::Out.Flush()
