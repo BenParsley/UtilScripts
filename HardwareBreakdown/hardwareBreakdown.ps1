@@ -1,6 +1,26 @@
 <#
 .SYNOPSIS
-    Hardware System Report (Console & PS2EXE Compatible)
+    Hardware System Breakdown & Inventory Utility (Console & PS2EXE Compatible).
+
+.DESCRIPTION
+    Queries system information using CIM/WMI and native cmdlets to generate a clean,
+    formatted breakdown of CPU, RAM, Motherboard, GPU, Storage Volumes, and connected Peripherals.
+    Includes safe clipboard copy support and standalone key-press exit handling.
+
+.EXAMPLE
+    .\hardwareBreakdown.ps1 - Runs the hardware inventory interactive console report.
+
+.OUTPUTS
+    Renders formatted hardware report text directly to standard console output.
+
+.NOTES
+    Author      : Ben Parsley
+    Platform    : Windows 10 / Windows 11 / Windows Server
+    Requires    : PowerShell 5.1+ (Run as Administrator for full drive/bus details)
+    PS2EXE      : Compatible with PS2EXE compilation for standalone executable distribution.
+
+.LINK
+    https://learn.microsoft.com/powershell/module/cimcmdlets/get-ciminstance
 #>
 
 # Initial feedback before WMI queries initialize
@@ -11,22 +31,22 @@
 [Console]::Out.Flush()
 
 # System Hardware Queries
-$cs    = Get-CimInstance Win32_ComputerSystem
-$bios  = Get-CimInstance Win32_BIOS
-$bb    = Get-CimInstance Win32_Baseboard
-$cpu   = @(Get-CimInstance Win32_Processor)[0]
-$ram   = @(Get-CimInstance Win32_PhysicalMemory)
-$gpu   = @(Get-CimInstance Win32_VideoController)
-$disk  = @(Get-CimInstance Win32_DiskDrive)
-$part  = @(Get-Partition)
-$vol   = @(Get-Volume)
-$phys  = @(Get-PhysicalDisk)
+$cs = Get-CimInstance Win32_ComputerSystem
+$bios = Get-CimInstance Win32_BIOS
+$bb = Get-CimInstance Win32_Baseboard
+$cpu = @(Get-CimInstance Win32_Processor)[0]
+$ram = @(Get-CimInstance Win32_PhysicalMemory)
+$gpu = @(Get-CimInstance Win32_VideoController)
+$disk = @(Get-CimInstance Win32_DiskDrive)
+$part = @(Get-Partition)
+$vol = @(Get-Volume)
+$phys = @(Get-PhysicalDisk)
 
 # System Peripherals
 $periph = @(Get-CimInstance Win32_PnPEntity | 
     Where-Object {
         $_.Present -and 
-        $_.PNPClass -in 'Keyboard','Mouse','AudioEndpoint','Camera','Image','Bluetooth' -and 
+        $_.PNPClass -in 'Keyboard', 'Mouse', 'AudioEndpoint', 'Camera', 'Image', 'Bluetooth' -and 
         $_.Name -notmatch 'Standard|Virtual|Root|Composite|Controller|Hub'
     } | Select-Object -ExpandProperty Name -Unique)
 
@@ -69,15 +89,15 @@ $disk | ForEach-Object {
     $d = $_
     $letters = @($part | Where-Object { $_.DiskNumber -eq $d.Index -and $_.DriveLetter } | Select-Object -ExpandProperty DriveLetter)
     $vols = @($vol | Where-Object { $_.DriveLetter -in $letters } | ForEach-Object {
-        $used = [Math]::Round(($_.Size - $_.SizeRemaining) / 1GB, 1)
-        $total = [Math]::Round($_.Size / 1GB, 1)
-        "$($_.DriveLetter): $used/$total GB used"
-    })
+            $used = [Math]::Round(($_.Size - $_.SizeRemaining) / 1GB, 1)
+            $total = [Math]::Round($_.Size / 1GB, 1)
+            "$($_.DriveLetter): $used/$total GB used"
+        })
     $volStr = if ($vols.Count -gt 0) { "[" + ($vols -join ', ') + "]" } else { "[No Letter]" }
 
     $pDisk = $phys | Where-Object { $_.DeviceId -eq $d.Index } | Select-Object -First 1
     $media = if ($pDisk -and $pDisk.MediaType -and $pDisk.MediaType -ne 'Unspecified') { $pDisk.MediaType } else { "Disk" }
-    $bus   = if ($pDisk -and $pDisk.BusType -and $pDisk.BusType -ne 'Unspecified') { $pDisk.BusType } else { $d.InterfaceType }
+    $bus = if ($pDisk -and $pDisk.BusType -and $pDisk.BusType -ne 'Unspecified') { $pDisk.BusType } else { $d.InterfaceType }
 
     [Console]::WriteLine("                  - $volStr $($d.Model) ($media via $bus)")
 }
@@ -91,7 +111,8 @@ $disk | ForEach-Object {
 
 if ($periph.Count -gt 0) {
     $periph | ForEach-Object { [Console]::WriteLine("  * $_") }
-} else {
+}
+else {
     [Console]::WriteLine("  * (No external peripheral devices detected)")
 }
 
@@ -112,8 +133,8 @@ while ($true) {
     
     # Check for 'C' or 'c' without the Ctrl or Alt modifiers
     $isPlainC = ($keyInfo.Key -eq [ConsoleKey]::C) -and 
-                (-not ($keyInfo.Modifiers -band [ConsoleModifiers]::Control)) -and 
-                (-not ($keyInfo.Modifiers -band [ConsoleModifiers]::Alt))
+    (-not ($keyInfo.Modifiers -band [ConsoleModifiers]::Control)) -and 
+    (-not ($keyInfo.Modifiers -band [ConsoleModifiers]::Alt))
 
     if ($isPlainC) {
         break
